@@ -1,4 +1,3 @@
-
 using System.Collections;
 using Script.Pathfinding;
 using UnityEngine;
@@ -12,7 +11,7 @@ public class Unit : MonoBehaviour
     [SerializeField] private float turnSpeed = 1;
     [SerializeField] private float pathUpdateMoveThreshold;
     [SerializeField] private float pathUpdateTime;
-    public  bool canMove;
+    public bool canMove;
     private Rigidbody _rigidbody;
     private Path _path;
 
@@ -22,15 +21,17 @@ public class Unit : MonoBehaviour
         StartCoroutine(UpdatePath());
     }
 
-    
+
     private void OnPathFound(Vector3[] waypoints, bool pathSuccessful)
     {
-        if (pathSuccessful)
-        {
-            _path = new Path(waypoints, transform.position, turnDistance);
-            StopCoroutine(nameof(StartMoving));
-            StartCoroutine(nameof(StartMoving));
-        }
+        _path = new Path(waypoints, transform.position, turnDistance);
+        StopCoroutine(nameof(StartMoving));
+        StartCoroutine(nameof(StartMoving));
+    }
+
+    private void Update()
+    {
+        _rigidbody.freezeRotation = !canMove;
     }
 
     IEnumerator StartMoving()
@@ -47,24 +48,27 @@ public class Unit : MonoBehaviour
             yield return null;
         }
     }
-    
+
 
     public void OnNewPathFindAlgorithm()
     {
         StopCoroutine(UpdatePath());
         StartCoroutine(UpdatePath());
     }
+
     IEnumerator UpdatePath()
     {
         var position = target.position;
-        PathRequestManager.RequestPath(new PathRequest(transform.position, position, OnPathFound));
+        var position1 = transform.position;
+        PathRequestManager.RequestPath(new PathRequest(position1, position, OnPathFound));
 
         float sqrMoveThreshhold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
         Vector3 targetPosOld = position;
+        Vector3 unitPosOld = position1;
         while (true)
         {
             yield return new WaitForSeconds(pathUpdateTime);
-            if ((target.position - targetPosOld).sqrMagnitude > sqrMoveThreshhold)
+            if ((target.position - targetPosOld).sqrMagnitude > sqrMoveThreshhold || (!canMove && (transform.position-unitPosOld).sqrMagnitude> sqrMoveThreshhold))
             {
                 position = target.position;
                 PathRequestManager.RequestPath((new PathRequest(transform.position, position, OnPathFound)));
@@ -75,6 +79,8 @@ public class Unit : MonoBehaviour
 
     IEnumerator FollowPath()
     {
+        if (_path.LookPoints.Length == 0)
+            yield break;
         bool followingPath = true;
         int pathIndex = 0;
         transform.LookAt(_path.LookPoints[0]);

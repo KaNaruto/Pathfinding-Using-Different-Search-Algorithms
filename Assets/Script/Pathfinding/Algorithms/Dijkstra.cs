@@ -12,6 +12,7 @@ namespace Script.Pathfinding.Algorithms
         private Grid _grid;
         private Heap<Node> _openList;
         private HashSet<Node> _closedList;
+        private readonly object _syncLock = new object();
     
         private void Awake()
         {
@@ -30,43 +31,47 @@ namespace Script.Pathfinding.Algorithms
             Node startNode = _grid.GetNodeFromWorldPosition(request.PathStart);
             Node targetNode = _grid.GetNodeFromWorldPosition(request.PathEnd);
 
-            if (startNode.Walkable && targetNode.Walkable)
+            lock (_syncLock)
             {
-                _openList.Clear();
-                _closedList.Clear();
-                Node.comparisonMode = Node.ComparisonMode.GCost;
-                _openList.Add(startNode);
-            
-                while (_openList.Count > 0)
+                if (startNode.Walkable && targetNode.Walkable)
                 {
-                    Node currentNode = _openList.RemoveFirst();
-                    _closedList.Add(currentNode);
+                    _openList.Clear();
+                    _closedList.Clear();
+                    Node.comparisonMode = Node.ComparisonMode.GCost;
+                    _openList.Add(startNode);
 
-                    if (currentNode == targetNode)
+                    while (_openList.Count > 0)
                     {
-                        sw.Stop();
-                        Debug.Log("Elapsed time= " + sw.ElapsedMilliseconds + " ms");
-                        pathSuccess = true;
-                        break;
-                    }
+                        Node currentNode = _openList.RemoveFirst();
+                        _closedList.Add(currentNode);
 
-
-                    List<Node> neighbours = _grid.GetNeighbours(currentNode);
-                    foreach (Node neighbourNode in neighbours)
-                    {
-                        if (!neighbourNode.Walkable || _closedList.Contains(neighbourNode))
-                            continue;
-
-                        int newMovementCostToNeighbour =
-                            currentNode.GCost + PathManager.GetDistance(currentNode, neighbourNode)+ neighbourNode.MovementPenalty;
-                        if (newMovementCostToNeighbour < neighbourNode.GCost || !_openList.Contains(neighbourNode))
+                        if (currentNode == targetNode)
                         {
-                            neighbourNode.GCost = newMovementCostToNeighbour;
-                            neighbourNode.Parent = currentNode;
-                            if (!_openList.Contains(neighbourNode))
-                                _openList.Add(neighbourNode);
-                            else
-                                _openList.UpdateItem(neighbourNode);
+                            sw.Stop();
+                            Debug.Log("Elapsed time= " + sw.ElapsedMilliseconds + " ms");
+                            pathSuccess = true;
+                            break;
+                        }
+
+
+                        List<Node> neighbours = _grid.GetNeighbours(currentNode);
+                        foreach (Node neighbourNode in neighbours)
+                        {
+                            if (!neighbourNode.Walkable || _closedList.Contains(neighbourNode))
+                                continue;
+
+                            int newMovementCostToNeighbour =
+                                currentNode.GCost + PathManager.GetDistance(currentNode, neighbourNode) +
+                                neighbourNode.MovementPenalty;
+                            if (newMovementCostToNeighbour < neighbourNode.GCost || !_openList.Contains(neighbourNode))
+                            {
+                                neighbourNode.GCost = newMovementCostToNeighbour;
+                                neighbourNode.Parent = currentNode;
+                                if (!_openList.Contains(neighbourNode))
+                                    _openList.Add(neighbourNode);
+                                else
+                                    _openList.UpdateItem(neighbourNode);
+                            }
                         }
                     }
                 }

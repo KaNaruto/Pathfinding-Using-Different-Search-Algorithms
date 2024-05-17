@@ -18,7 +18,9 @@ namespace Script.Pathfinding
         public Node Parent;
         public int GCost; // Distance to current position
         public int HCost; // Heuristic cost (Distance to target position)
-
+        
+        private readonly object _lock = new object();
+        private int _heapIndex;
         private int FCost => GCost + HCost; // Total cost
 
         public int MovementPenalty;
@@ -73,6 +75,22 @@ namespace Script.Pathfinding
         }
 
 
-        public int HeapIndex { get; set; }
+        public int HeapIndex
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _heapIndex;
+                }
+            }
+            set
+            {
+                lock (_lock)
+                {
+                    _heapIndex = value;
+                }
+            }
+        }
     }
 }

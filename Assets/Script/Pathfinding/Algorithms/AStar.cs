@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Script.Utility;
+using UnityEngine;
 using Debug = UnityEngine.Debug;
-using Vector3 = UnityEngine.Vector3;
 
 namespace Script.Pathfinding.Algorithms
 {
@@ -12,6 +12,7 @@ namespace Script.Pathfinding.Algorithms
         private Grid _grid;
         private Heap<Node> _openList;
         private HashSet<Node> _visitedList;
+        private readonly object _syncLock = new object();
     
         private void Awake()
         {
@@ -21,9 +22,7 @@ namespace Script.Pathfinding.Algorithms
             _visitedList = new HashSet<Node>();
         }
 
-   
-
-        public override void FindPath(PathRequest request,Action<PathResult> callback)
+        public override void FindPath(PathRequest request, Action<PathResult> callback)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -31,56 +30,54 @@ namespace Script.Pathfinding.Algorithms
             Node startNode = _grid.GetNodeFromWorldPosition(request.PathStart);
             Node targetNode = _grid.GetNodeFromWorldPosition(request.PathEnd);
 
-            if (startNode.Walkable && targetNode.Walkable)
+            lock (_syncLock)
             {
-                _openList.Clear();
-                _visitedList.Clear();
-                Node.comparisonMode = Node.ComparisonMode.FCost;
-                _openList.Add(startNode);
-
-                while (_openList.Count > 0)
+                if (startNode.Walkable && targetNode.Walkable)
                 {
-                    Node currentNode = _openList.RemoveFirst();
-                    _visitedList.Add(currentNode);
+                    _openList.Clear();
+                    _visitedList.Clear();
+                    Node.comparisonMode = Node.ComparisonMode.FCost;
+                    _openList.Add(startNode);
 
-                    if (currentNode == targetNode)
+                    while (_openList.Count > 0)
                     {
-                        sw.Stop();
-                        Debug.Log("Elapsed time= " + sw.ElapsedMilliseconds + " ms");
-                        pathSuccess = true;
-                        break;
-                    }
+                        Node currentNode = _openList.RemoveFirst();
+                        _visitedList.Add(currentNode);
 
-
-                    List<Node> neighbours = _grid.GetNeighbours(currentNode);
-                    foreach (Node neighbourNode in neighbours)
-                    {
-                        if (!neighbourNode.Walkable || _visitedList.Contains(neighbourNode))
-                            continue;
-
-                        int newMovementCostToNeighbour =
-                            currentNode.GCost + PathManager.GetDistance(currentNode, neighbourNode)+ neighbourNode.MovementPenalty;
-                        if (newMovementCostToNeighbour < neighbourNode.GCost || !_openList.Contains(neighbourNode))
+                        if (currentNode == targetNode)
                         {
-                            neighbourNode.GCost = newMovementCostToNeighbour;
-                            neighbourNode.HCost = PathManager.GetDistance(neighbourNode, targetNode);
-                            neighbourNode.Parent = currentNode;
-                            if (!_openList.Contains(neighbourNode))
-                                _openList.Add(neighbourNode);
-                            else
-                                _openList.UpdateItem(neighbourNode);
+                            sw.Stop();
+                            Debug.Log("Elapsed time= " + sw.ElapsedMilliseconds + " ms");
+                            pathSuccess = true;
+                            break;
+                        }
+
+                        List<Node> neighbours = _grid.GetNeighbours(currentNode);
+                        foreach (Node neighbourNode in neighbours)
+                        {
+                            if (!neighbourNode.Walkable || _visitedList.Contains(neighbourNode))
+                                continue;
+
+                            int newMovementCostToNeighbour =
+                                currentNode.GCost + PathManager.GetDistance(currentNode, neighbourNode) + neighbourNode.MovementPenalty;
+                            if (newMovementCostToNeighbour < neighbourNode.GCost || !_openList.Contains(neighbourNode))
+                            {
+                                neighbourNode.GCost = newMovementCostToNeighbour;
+                                neighbourNode.HCost = PathManager.GetDistance(neighbourNode, targetNode);
+                                neighbourNode.Parent = currentNode;
+                                if (!_openList.Contains(neighbourNode))
+                                    _openList.Add(neighbourNode);
+                                else
+                                    _openList.UpdateItem(neighbourNode);
+                            }
                         }
                     }
                 }
             }
 
-       
             Vector3[] waypoints = pathSuccess ? PathManager.RetracePath(startNode, targetNode) : Array.Empty<Vector3>();
             pathSuccess = waypoints.Length > 0;
             callback(new PathResult(waypoints, pathSuccess, request.Callback));
         }
-
-
-    
     }
 }

@@ -5,7 +5,7 @@ namespace Script.Pathfinding
 {
     public class Grid : MonoBehaviour
     {
-        [SerializeField] bool displayGridGizmos;
+        [SerializeField]public  bool displayGridGizmos;
         Node[,] _grid;
         [SerializeField] Vector2 gridWorldSize;
         [SerializeField] LayerMask unwalkableMask;
@@ -18,11 +18,33 @@ namespace Script.Pathfinding
         public int MaxSize => _maxSize;
 
         private int _maxSize;
-
+        private readonly object _gridLock = new object();
         private void Awake()
         {
+            lock (_gridLock)
+            {
+                GridProperties(nodeRadius);
+            }
+        }
+
+        public void GridProperties(float radius)
+        {
+            if(radius<=0)
+                return;
             // Compute how many grid will be
+            nodeRadius = radius;
             _nodeDiameter = nodeRadius * 2;
+            _gridSizeX = Mathf.RoundToInt(gridWorldSize.x / _nodeDiameter);
+            _gridSizeY = Mathf.RoundToInt(gridWorldSize.y / _nodeDiameter);
+            _maxSize = _gridSizeX * _gridSizeY;
+            CreateGrid();
+        }
+        
+        public void GridProperties(int gridWorldSizeX, int gridWorldSizeY)
+        {
+            gridWorldSize.x = gridWorldSizeX;
+            gridWorldSize.y = gridWorldSizeY;
+            
             _gridSizeX = Mathf.RoundToInt(gridWorldSize.x / _nodeDiameter);
             _gridSizeY = Mathf.RoundToInt(gridWorldSize.y / _nodeDiameter);
             _maxSize = _gridSizeX * _gridSizeY;
@@ -31,28 +53,32 @@ namespace Script.Pathfinding
 
         void CreateGrid()
         {
-            _grid = new Node[_gridSizeX, _gridSizeY];
-
-            Vector3 wordBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 -
-                                     Vector3.forward * gridWorldSize.y / 2;
-            for (int x = 0; x < _gridSizeX; x++)
+            lock (_gridLock)
             {
-                for (int y = 0; y < _gridSizeY; y++)
+                _grid = new Node[_gridSizeX, _gridSizeY];
+
+                Vector3 wordBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 -
+                                         Vector3.forward * gridWorldSize.y / 2;
+                for (int x = 0; x < _gridSizeX; x++)
                 {
-                    Vector3 worldPoint = wordBottomLeft + Vector3.right * (x * _nodeDiameter + nodeRadius) +
-                                         Vector3.forward * (y * _nodeDiameter + nodeRadius);
-                    bool walkable = !Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask);
+                    for (int y = 0; y < _gridSizeY; y++)
+                    {
+                        Vector3 worldPoint = wordBottomLeft + Vector3.right * (x * _nodeDiameter + nodeRadius) +
+                                             Vector3.forward * (y * _nodeDiameter + nodeRadius);
+                        bool walkable = !Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask);
 
-                    int movementPenalty = 0;
+                        int movementPenalty = 0;
 
-                    if (!walkable)
-                        movementPenalty = obstacleProximityPenalty;
+                        if (!walkable)
+                            movementPenalty = obstacleProximityPenalty;
 
 
-                    _grid[x, y] = new Node(walkable, worldPoint, x, y, movementPenalty);
+                        _grid[x, y] = new Node(walkable, worldPoint, x, y, movementPenalty);
+                    }
                 }
+
+                BlurPenaltyMap(3);
             }
-            BlurPenaltyMap(3);
         }
 
 
@@ -71,17 +97,20 @@ namespace Script.Pathfinding
 
         public Node GetNodeFromWorldPosition(Vector3 worldPosition)
         {
-            Vector3 wordBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 -
-                                     Vector3.forward * gridWorldSize.y / 2;
-            int x = Mathf.RoundToInt((worldPosition.x + nodeRadius - wordBottomLeft.x) / _nodeDiameter) - 1;
-            int y = Mathf.RoundToInt((worldPosition.z + nodeRadius - wordBottomLeft.z) / _nodeDiameter) - 1;
+            lock (_gridLock)
+            {
+                Vector3 wordBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 -
+                                         Vector3.forward * gridWorldSize.y / 2;
+                int x = Mathf.RoundToInt((worldPosition.x + nodeRadius - wordBottomLeft.x) / _nodeDiameter) - 1;
+                int y = Mathf.RoundToInt((worldPosition.z + nodeRadius - wordBottomLeft.z) / _nodeDiameter) - 1;
 
-            // Ensure x and y are within the grid bounds
-            x = Mathf.Clamp(x, 0, _gridSizeX - 1);
-            y = Mathf.Clamp(y, 0, _gridSizeY - 1);
+                // Ensure x and y are within the grid bounds
+                x = Mathf.Clamp(x, 0, _gridSizeX - 1);
+                y = Mathf.Clamp(y, 0, _gridSizeY - 1);
 
 
-            return _grid[x, y];
+                return _grid[x, y];
+            }
         }
 
         public List<Node> GetNeighbours(Node node)

@@ -11,7 +11,7 @@ namespace Script.Pathfinding.Algorithms
         private Grid _grid;
         private Queue<Node> _openNodes;
         private HashSet<Node> _visitedNodes;
-
+        private readonly object _syncLock = new object();
         private void Awake()
         {
             _grid = GetComponent<Grid>();
@@ -27,34 +27,37 @@ namespace Script.Pathfinding.Algorithms
             Node startNode = _grid.GetNodeFromWorldPosition(request.PathStart);
             Node targetNode = _grid.GetNodeFromWorldPosition(request.PathEnd);
 
-            if (startNode.Walkable && targetNode.Walkable)
+            lock (_syncLock)
             {
-                _openNodes.Clear();
-                _visitedNodes.Clear();
-                _openNodes.Enqueue(startNode);
-
-                while (_openNodes.Count > 0)
+                if (startNode.Walkable && targetNode.Walkable)
                 {
-                    Node currentNode = _openNodes.Dequeue();
-                    _visitedNodes.Add(currentNode);
+                    _openNodes.Clear();
+                    _visitedNodes.Clear();
+                    _openNodes.Enqueue(startNode);
 
-                    if (currentNode == targetNode)
+                    while (_openNodes.Count > 0)
                     {
-                        sw.Stop();
-                        Debug.Log("Path found: " + sw.ElapsedMilliseconds + " ms");
-                        pathSuccess = true;
-                        break;
-                    }
+                        Node currentNode = _openNodes.Dequeue();
+                        _visitedNodes.Add(currentNode);
 
-                    foreach (Node neighbor in _grid.GetNeighbours(currentNode))
-                    {
-                        if (!neighbor.Walkable || _visitedNodes.Contains(neighbor))
-                            continue;
-
-                        if (!_openNodes.Contains(neighbor))
+                        if (currentNode == targetNode)
                         {
-                            neighbor.Parent = currentNode;
-                            _openNodes.Enqueue(neighbor);
+                            sw.Stop();
+                            Debug.Log("Path found: " + sw.ElapsedMilliseconds + " ms");
+                            pathSuccess = true;
+                            break;
+                        }
+
+                        foreach (Node neighbor in _grid.GetNeighbours(currentNode))
+                        {
+                            if (!neighbor.Walkable || _visitedNodes.Contains(neighbor))
+                                continue;
+
+                            if (!_openNodes.Contains(neighbor))
+                            {
+                                neighbor.Parent = currentNode;
+                                _openNodes.Enqueue(neighbor);
+                            }
                         }
                     }
                 }

@@ -6,9 +6,18 @@ namespace Script.Utility
     {
         private readonly T[] _items;
         private int _currentItemCount;
-    
+        private readonly object _lock = new object();
 
-        public int Count => _currentItemCount;
+        public int Count
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _currentItemCount;
+                }
+            }
+        }
 
         public void UpdateItem(T item)
         {
@@ -22,28 +31,34 @@ namespace Script.Utility
 
         public void Add(T item)
         {
-            if (_currentItemCount == _items.Length)
-                return;
-            item.HeapIndex = _currentItemCount;
-            _items[_currentItemCount] = item;
-            SortUp(item);
-            _currentItemCount++;
+            lock (_lock)
+            {
+                if (_currentItemCount == _items.Length)
+                    return;
+                item.HeapIndex = _currentItemCount;
+                _items[_currentItemCount] = item;
+                SortUp(item);
+                _currentItemCount++;
+            }
         }
 
         public T RemoveFirst()
         {
-            if (_currentItemCount == 0)
-                return default(T);
+            lock (_lock)
+            {
+                if (_currentItemCount == 0)
+                    return default(T);
 
-            T firstItem = _items[0];
-            _currentItemCount--;
+                T firstItem = _items[0];
+                _currentItemCount--;
 
-            T lastItem = _items[_currentItemCount];
-            _items[0] = lastItem;
-            lastItem.HeapIndex = 0;
+                T lastItem = _items[_currentItemCount];
+                _items[0] = lastItem;
+                lastItem.HeapIndex = 0;
 
-            SortDown(_items[0]);
-            return firstItem;
+                SortDown(_items[0]);
+                return firstItem;
+            }
         }
 
         private void SortUp(T item)
@@ -100,7 +115,10 @@ namespace Script.Utility
 
         public void Clear()
         {
-            _currentItemCount = 0;
+            lock (_lock)
+            {
+                _currentItemCount = 0;
+            }
         }
     }
 

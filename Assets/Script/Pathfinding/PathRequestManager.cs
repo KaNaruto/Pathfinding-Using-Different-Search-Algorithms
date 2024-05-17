@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Script.Pathfinding.Algorithms;
 using UnityEngine;
 
@@ -15,32 +15,26 @@ namespace Script.Pathfinding
         private GreedyBestFit _greedyBestFit;
         public PathFinding algorithm;
 
-
         public static PathRequestManager Instance;
-        private readonly Queue<PathResult> _results = new Queue<PathResult>();
+        private readonly ConcurrentQueue<PathResult> _results = new ConcurrentQueue<PathResult>();
+        private readonly ConcurrentQueue<Action> _actions = new ConcurrentQueue<Action>();
 
         private void Awake()
         {
             Instance = this;
             algorithm = GetComponent<AStar>();
         }
-    
+
         private void Update()
         {
-            lock (_results)
+            while (_results.TryDequeue(out PathResult result))
             {
-                if (_results.Count > 0)
-                {
-                    int itemsInQueue = _results.Count;
-                    lock (_results)
-                    {
-                        for (int i = 0; i < itemsInQueue; i++)
-                        {
-                            PathResult result = _results.Dequeue();
-                            result.Callback(result.Path, result.Success);
-                        }
-                    }
-                }
+                result.Callback(result.Path, result.Success);
+            }
+
+            while (_actions.TryDequeue(out var action))
+            {
+                action.Invoke();
             }
         }
 
@@ -65,22 +59,26 @@ namespace Script.Pathfinding
                     break;
             }
         }
+
         public static void RequestPath(PathRequest request)
         {
-            ThreadStart threadStart = delegate
+            Task.Run(() =>
             {
-                Instance.algorithm.FindPath(request, Instance.FinishedProcessingPath);
-            };
-            threadStart.Invoke();
+                Instance.EnqueueAction(() =>
+                {
+                    Instance.algorithm.FindPath(request, Instance.FinishedProcessingPath);
+                });
+            });
         }
 
+        private void EnqueueAction(Action action)
+        {
+            _actions.Enqueue(action);
+        }
 
         void FinishedProcessingPath(PathResult result)
         {
-            lock (_results)
-            {
-                _results.Enqueue(result);
-            }
+            _results.Enqueue(result);
         }
     }
 
@@ -92,9 +90,9 @@ namespace Script.Pathfinding
 
         public PathResult(Vector3[] path, bool success, Action<Vector3[], bool> callback)
         {
-            this.Path = path;
-            this.Success = success;
-            this.Callback = callback;
+            Path = path;
+            Success = success;
+            Callback = callback;
         }
     }
 

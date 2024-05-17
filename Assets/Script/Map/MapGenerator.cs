@@ -30,6 +30,17 @@ namespace Script.Map
         private Transform[,] _tileMap;
         private Queue<Coordinate> _shuffledOpenTileCoordinates;
 
+        [SerializeField] private GameObject target;
+        
+        public void SetProperties(int x, int y,int seed,float obstacleRate)
+        {
+            maps[mapIndex].mapSize.x = x;
+            maps[mapIndex].mapSize.y = y;
+            maps[mapIndex].seed = seed;
+            maps[mapIndex].obstacleRate = obstacleRate;
+            
+            GenerateMap();
+        }
 
         public void GenerateMap()
         {
@@ -80,7 +91,7 @@ namespace Script.Map
                 obstacleMap[randomCoordinate.x, randomCoordinate.y] = true;
                 currentObstacleCount++;
 
-                if (randomCoordinate != _currentMap.MapCentre && MapIsFullAccessible(obstacleMap, currentObstacleCount))
+                if (!IsThereAnyUnit(randomCoordinate) && MapIsFullAccessible(obstacleMap, currentObstacleCount))
                 {
                     float obstacleHeight = Mathf.Lerp(_currentMap.minObstacleHeight, _currentMap.maxObstacleHeight,
                         (float)random.NextDouble());
@@ -117,6 +128,36 @@ namespace Script.Map
 
 
             mapFloor.localScale = new Vector3(_currentMap.mapSize.x * tileSize, _currentMap.mapSize.y * tileSize);
+        }
+
+        bool IsThereAnyUnit(Coordinate coordinate)
+        {
+            // Check if the coordinate is the map center
+            if (coordinate == _currentMap.MapCentre)
+                return true;
+
+            // Convert the coordinate to world position
+            Vector3 worldPosition = CoordinatesToPosition(coordinate.x, coordinate.y);
+
+            // Check against all units
+            Unit[] units = FindObjectsOfType<Unit>();
+            foreach (Unit unit in units)
+            {
+                if (unit != null)
+                {
+                    Vector3 unitPosition = unit.transform.position;
+                    if (Vector3.Distance(unitPosition, worldPosition) < tileSize)
+                        return true;
+                }
+            }
+
+            // Check against the target
+            Vector3 targetPosition = target.transform.position;
+            if (Vector3.Distance(targetPosition, worldPosition) < tileSize)
+                return true;
+
+            // If no unit or target is at the coordinate, return false
+            return false;
         }
 
         // Flood fill algorithm

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7942279846090400495}
   - component: {fileID: 391439997701637239}
   - component: {fileID: 3653169219980899579}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -122,3 +122,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: {fileID: 0}
   speed: 1
+  turnDistance: 1
+  turnSpeed: 1
+  pathUpdateMoveThreshold: 0
+  pathUpdateTime: 0
+  canMove: 0
