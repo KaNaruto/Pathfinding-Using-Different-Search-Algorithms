@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Grid = Script.Pathfinding.Grid;
 using Random = System.Random;
 
 namespace Script.Map
@@ -30,16 +31,28 @@ namespace Script.Map
         private Transform[,] _tileMap;
         private Queue<Coordinate> _shuffledOpenTileCoordinates;
 
-        [SerializeField] private GameObject target;
-        
-        public void SetProperties(int x, int y,int seed,float obstacleRate)
+        public Transform target;
+
+        private void Start()
+        {
+            MapData? mapData = SaveSystem.LoadMapData();
+            if (mapData != null)
+            {
+                MapData data = mapData.Value;
+                SetProperties(data.xSize,data.ySize,data.seed,data.obstacleRate);
+            }
+        }
+
+        public void SetProperties(int x, int y, int seed, float obstacleRate)
         {
             maps[mapIndex].mapSize.x = x;
             maps[mapIndex].mapSize.y = y;
             maps[mapIndex].seed = seed;
             maps[mapIndex].obstacleRate = obstacleRate;
             
+            SaveSystem.SaveMapData(new MapData(x, y, seed, obstacleRate));
             GenerateMap();
+            FindObjectOfType<Grid>().GridProperties(x, y);
         }
 
         public void GenerateMap()
@@ -124,10 +137,9 @@ namespace Script.Map
             _shuffledOpenTileCoordinates =
                 new Queue<Coordinate>(Utility.Utility.ShuffleArray(allOpenTileCoordinates.ToArray(), _currentMap.seed));
 
-        
-
-
             mapFloor.localScale = new Vector3(_currentMap.mapSize.x * tileSize, _currentMap.mapSize.y * tileSize);
+            
+            FindObjectOfType<UnitManager>().FindNewPath();
         }
 
         bool IsThereAnyUnit(Coordinate coordinate)

@@ -1,62 +1,84 @@
+using System;
 using System.Diagnostics;
-using Script.Map;
-using Script.Pathfinding;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UIElements;
-using Debug = UnityEngine.Debug;
+using UnityEngine.Serialization;
+using UnityEngine.UI;
+using Script.Map;
+using Script.Pathfinding;
 using Grid = Script.Pathfinding.Grid;
-using Slider = UnityEngine.UI.Slider;
-
 
 public class Menu : MonoBehaviour
 {
-    [SerializeField] private TMP_Dropdown algorithms;
-    [SerializeField] private TextMeshProUGUI elapsedTime;
-
+    [SerializeField] private TMP_Dropdown algorithmDropdown;
+    [SerializeField] private TextMeshProUGUI elapsedTimeText;
     [SerializeField] private TMP_InputField nodeRadiusInput;
-
-    [SerializeField] private Slider obstacleRateInput;
+    [SerializeField] private Slider obstacleRateSlider;
     [SerializeField] private TMP_InputField xSizeInput;
     [SerializeField] private TMP_InputField ySizeInput;
     [SerializeField] private TMP_InputField seedInput;
+    [SerializeField] private CanvasGroup optionsPanel;
+    public bool isFinished;
+    private bool _isStarted;
 
-    public bool start;
     private readonly Stopwatch _stopwatch = new Stopwatch();
+
+    private void Start()
+    {
+        MapData? mapData = SaveSystem.LoadMapData();
+        if (mapData != null)
+        {
+            InitializeSettings(mapData.Value);
+        }
+    }
+
+    private void InitializeSettings(MapData mapData)
+    {
+        xSizeInput.text = mapData.xSize.ToString();
+        ySizeInput.text = mapData.ySize.ToString();
+        obstacleRateSlider.value = mapData.obstacleRate;
+        seedInput.text = mapData.seed.ToString();
+    }
 
     private void Update()
     {
-        if (start)
+        if (isFinished)
         {
-            long elapsedTimeInMs = _stopwatch.ElapsedMilliseconds;
-            float elapsedTimeInS = elapsedTimeInMs / 1000.0f;
-            string formattedTime = elapsedTimeInS.ToString("F2");
-            elapsedTime.text = formattedTime + " \nseconds";
+            UpdateElapsedTime();
         }
         else
+        {
             _stopwatch.Stop();
+        }
+    }
+
+    private void UpdateElapsedTime()
+    {
+        long elapsedTimeInMs = _stopwatch.ElapsedMilliseconds;
+        float elapsedTimeInSeconds = elapsedTimeInMs / 1000.0f;
+        elapsedTimeText.text = $"{elapsedTimeInSeconds:F2} seconds";
     }
 
     public void OnStart()
     {
-        if (!start)
+        if (!isFinished)
         {
-            algorithms.interactable = false;
-            nodeRadiusInput.interactable = false;
-            Unit[] units = FindObjectsOfType<Unit>();
-            foreach (Unit unit in units)
-            {
-                unit.canMove = true;
-            }
-
-            start = true;
+            FindObjectOfType<UnitManager>().SaveData();
+            SetInteractable(false);
+            EnableUnitMovement(true);
+            isFinished = true;
+            _isStarted = true;
             _stopwatch.Restart();
         }
     }
 
+   
+
     public void OnReset()
     {
+        if(!_isStarted)
+            FindObjectOfType<UnitManager>().SaveData();
         SceneManager.LoadScene("Algorithm");
     }
 
@@ -75,26 +97,17 @@ public class Menu : MonoBehaviour
     public void OnNewAlgorithm(int value)
     {
         PathRequestManager.Instance.SetAlgorithm(value);
-        FindNewPath();
+        FindObjectOfType<UnitManager>().FindNewPath();
     }
 
     public void OnNewRadius(string radius)
     {
         float nodeRadius = float.Parse(radius);
         FindObjectOfType<Grid>().GridProperties(nodeRadius);
-        FindNewPath();
+        FindObjectOfType<UnitManager>().FindNewPath();
     }
 
-    private void FindNewPath()
-    {
-        Unit[] units = FindObjectsOfType<Unit>();
-        foreach (Unit unit in units)
-        {
-            unit.OnNewPathFindAlgorithm();
-        }
-    }
-
-    public void DisplayGrizmos(bool value)
+    public void DisplayGizmos(bool value)
     {
         FindObjectOfType<Grid>().displayGridGizmos = value;
     }
@@ -106,31 +119,28 @@ public class Menu : MonoBehaviour
 
     public void OnXSizeChanged(string size)
     {
-        if (size.Length == 0)
+        if (string.IsNullOrEmpty(size))
         {
             xSizeInput.text = "0";
         }
-
         CreateNewMap();
     }
 
     public void OnYSizeChanged(string size)
     {
-        if (size.Length == 0)
+        if (string.IsNullOrEmpty(size))
         {
             ySizeInput.text = "0";
         }
-
         CreateNewMap();
     }
 
     public void OnSeedChanged(string seed)
     {
-        if (seed.Length == 0)
+        if (string.IsNullOrEmpty(seed))
         {
             seedInput.text = "0";
         }
-
         CreateNewMap();
     }
 
@@ -139,11 +149,36 @@ public class Menu : MonoBehaviour
         int x = int.Parse(xSizeInput.text);
         int y = int.Parse(ySizeInput.text);
         int seed = int.Parse(seedInput.text);
-        float obstacleRate = obstacleRateInput.value;
+        float obstacleRate = obstacleRateSlider.value;
 
-        FindObjectOfType<MapGenerator>().SetProperties(x, y, seed, obstacleRate);
+        var mapGenerator = FindObjectOfType<MapGenerator>();
+        var grid = FindObjectOfType<Grid>();
 
-        FindObjectOfType<Grid>().GridProperties(x, y);
-        FindNewPath();
+        mapGenerator.SetProperties(x, y, seed, obstacleRate);
+        grid.GridProperties(x, y);
+    }
+
+    public void AddUnit()
+    {
+        FindObjectOfType<UnitManager>().AddUnit();
+    }
+
+    public void RemoveUnit()
+    {
+        FindObjectOfType<UnitManager>().RemoveUnit();
+    }
+
+    private void SetInteractable(bool interactable)
+    {
+        algorithmDropdown.interactable = interactable;
+        optionsPanel.interactable = interactable;
+    }
+
+    private void EnableUnitMovement(bool canMove)
+    {
+        foreach (var unit in FindObjectsOfType<Unit>())
+        {
+            unit.canMove = canMove;
+        }
     }
 }

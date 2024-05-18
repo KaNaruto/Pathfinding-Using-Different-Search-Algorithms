@@ -32,17 +32,19 @@ namespace Script.Pathfinding
             return new Vector2(vector3.x, vector3.z);
         }
 
-        public void DrawWithGizmos()
+        public void DrawWithGizmos(int pathIndex)
         {
             Gizmos.color = Color.grey;
-            foreach (Vector3 points in LookPoints)
+            
+            for (int i = pathIndex; i < LookPoints.Length-1;i++)
             {
-                Gizmos.DrawCube(points+Vector3.up,new Vector3(0.25f,0,0.25f));
+                Gizmos.DrawCube(LookPoints[i]+Vector3.up,new Vector3(0.25f,0,0.25f));
             }
 
-            for (int i = 0; i < LookPoints.Length-1;i++)
+            Gizmos.color = Color.black;
+            for (int i = pathIndex; i < LookPoints.Length-1;i++)
             {
-                Gizmos.color = Color.black;
+                
                 Gizmos.DrawLine(LookPoints[i]+Vector3.up,LookPoints[i+1]+Vector3.up);
             }
         }
