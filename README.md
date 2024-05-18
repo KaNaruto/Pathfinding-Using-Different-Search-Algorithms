@@ -1,3 +1,16 @@
+# Pathfinding Using Different Search Algorithms
+
+This project showcases various pathfinding algorithms implemented in a grid-based system. It demonstrates how different algorithms solve the pathfinding problem, highlighting their strengths and weaknesses. The project is built with the aim of providing a comprehensive comparison and a practical implementation reference for anyone interested in pathfinding techniques.
+
+## Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Algorithms Implemented](#algorithms-implemented)
+- [Setup](#setup)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [Acknowledgments](#acknowledgments)
+
 
 ## Overview
 Pathfinding is an essential aspect of many applications, especially in game development and robotics. This project compares different search algorithms, showing how they navigate through a grid to find the shortest path from a start point to an end point.
