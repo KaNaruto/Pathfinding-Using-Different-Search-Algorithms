@@ -68,5 +68,7 @@ Contributions are welcome! If you have any improvements or new features to add, 
 5. Create a new Pull Request.
 
 ## Acknowledgments
-Inspiration from various pathfinding resources and tutorials one of them was [Sebastian Lague Pathfinding Tutorial](https://www.youtube.com/watch?v=-L-WgKMFuhE&list=PLFt_AvWsXl0cq5Umv3pMC9SPnKjfp9eGW)
+Inspiration from various pathfinding resources and tutorials one of them was [Sebastian Lague Pathfinding Tutorial](https://www.youtube.com/watch?v=-L-WgKMFuhE&list=PLFt_AvWsXl0cq5Umv3pMC9SPnKjfp9eGW).
+
+
 For further understanding and a visual guide on pathfinding, check out this [YouTube video](https://www.youtube.com/watch?v=SdnsqqQ7hQA).
