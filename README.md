@@ -1,5 +1,4 @@
 # Pathfinding Using Different Search Algorithms
-
 This project showcases various pathfinding algorithms implemented in a grid-based system. It demonstrates how different algorithms solve the pathfinding problem, highlighting their strengths and weaknesses. The project is built with the aim of providing a comprehensive comparison and a practical implementation reference for anyone interested in pathfinding techniques.
 
 ## Table of Contents
@@ -70,3 +69,4 @@ Contributions are welcome! If you have any improvements or new features to add, 
 
 ## Acknowledgments
 Inspiration from various pathfinding resources and tutorials one of them was [Sebastian Lague Pathfinding Tutorial](https://www.youtube.com/watch?v=-L-WgKMFuhE&list=PLFt_AvWsXl0cq5Umv3pMC9SPnKjfp9eGW)
+For further understanding and a visual guide on pathfinding, check out this [YouTube video](https://www.youtube.com/watch?v=SdnsqqQ7hQA).
